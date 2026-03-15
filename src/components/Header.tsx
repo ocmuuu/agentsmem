@@ -29,16 +29,6 @@ export function Header({ hasSession }: { hasSession: boolean }) {
         </Link>
         <div className="flex items-center gap-1">
           <LocaleSwitcher />
-          {hasSession ? (
-            <Link
-              className="text-slate-600 hover:text-slate-900 transition-colors px-3 py-2 rounded-lg hover:bg-slate-100 text-sm font-medium"
-              aria-label={t('header.backups')}
-              title={t('header.backups')}
-              href="/dashboard#backups"
-            >
-              {t('header.backups')}
-            </Link>
-          ) : null}
           <Link
             className="text-slate-600 hover:text-slate-900 transition-colors p-2 rounded-lg hover:bg-slate-100"
             aria-label={t('guide.title')}

@@ -93,3 +93,11 @@ export function isValidAgentName(agentName: string): boolean {
 export async function linkAgentToUser(agentId: string, userId: string): Promise<void> {
   await pool.execute('UPDATE agents SET user_id = ? WHERE id = ?', [userId, agentId]);
 }
+
+export async function findAgentsByUserId(userId: string): Promise<Agent[]> {
+  const [rows] = await pool.execute<import('mysql2').RowDataPacket[]>(
+    'SELECT id, user_id, agent_name_ciphertext, api_key_hash, created_at FROM agents WHERE user_id = ? ORDER BY created_at ASC',
+    [userId]
+  );
+  return rows.map((r) => rowToAgent(r));
+}

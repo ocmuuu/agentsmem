@@ -1,6 +1,6 @@
 import { getPool } from '../models/db.js';
-import { listBackupsForUser } from './backupService.js';
 import { decryptField } from '../utils/crypto.js';
+import { findAgentsByUserId } from './agentService.js';
 
 const pool = getPool();
 
@@ -10,19 +10,18 @@ function decryptBuf(buf: unknown): string | null {
   return null;
 }
 
+export interface DashboardAgent {
+  id: string;
+  name: string;
+  handle: string;
+  created_at: string;
+}
+
 export interface DashboardData {
-  agent: {
-    id: string;
-    name: string;
-    handle: string;
-  };
+  agents: DashboardAgent[];
   account: {
     email: string | null;
     has_password: boolean;
-  };
-  backups: {
-    items: import('../models/backup.js').BackupSummary[];
-    total: number;
   };
 }
 
@@ -50,22 +49,21 @@ export async function getDashboardForAgent(agentId: string): Promise<DashboardDa
 
   const me = rows[0];
   const userId = me.user_id as string;
-  const agentName = decryptBuf(me.agent_name_ciphertext) ?? '';
   const email = decryptBuf(me.email_ciphertext);
-  const agentPayload = {
-    id: me.id,
-    name: agentName,
-    handle: `${agentName}@agentsmem`,
-  };
-  const accountPayload = {
-    email,
-    has_password: Boolean(me.password_hash),
-  };
-  const backupResult = await listBackupsForUser(userId, { limit: 50 });
+
+  const allAgents = await findAgentsByUserId(userId);
+  const agents: DashboardAgent[] = allAgents.map((a) => ({
+    id: a.id,
+    name: a.agent_name,
+    handle: `${a.agent_name}@agentsmem`,
+    created_at: toIsoString(a.created_at),
+  }));
 
   return {
-    agent: agentPayload,
-    account: accountPayload,
-    backups: { items: backupResult.items, total: backupResult.total },
+    agents,
+    account: {
+      email,
+      has_password: Boolean(me.password_hash),
+    },
   };
 }

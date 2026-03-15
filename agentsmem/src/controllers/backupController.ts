@@ -77,7 +77,8 @@ export async function listBackups(req: SessionAuthenticatedRequest, res: Respons
   try {
     const limit = parseInt(String(req.query.limit ?? ''), 10) || undefined;
     const offset = parseInt(String(req.query.offset ?? ''), 10) || undefined;
-    const result = await listBackupsForUser(req.userId!, { limit, offset });
+    const agentId = String(req.query.agent_id ?? '').trim() || undefined;
+    const result = await listBackupsForUser(req.userId!, { limit, offset, agentId });
     res.json({ items: result.items, total: result.total });
   } catch (error) {
     console.error('List backups error:', error);

@@ -9,31 +9,19 @@ const BACKEND =
   process.env.AGENTSMEM_API_URL ??
   (process.env.NODE_ENV === 'development' ? 'http://localhost:3011' : 'http://127.0.0.1:3011');
 
-type BackupItem = {
+type DashboardAgent = {
   id: string;
-  file_id: string;
-  user_id: string;
-  agent_id: string;
-  agent_name: string;
-  file_name: string;
-  file_path: string;
-  ciphertext_md5: string;
-  file_size_bytes: number;
-  content_type: string;
-  timestamp: string;
+  name: string;
+  handle: string;
+  created_at: string;
 };
 
 type DashboardData = {
-  agent: {
-    id: string;
-    name: string;
-    handle: string;
-  };
+  agents: DashboardAgent[];
   account: {
     email: string | null;
     has_password: boolean;
   };
-  backups: { items: BackupItem[] };
 };
 
 function buildCookieHeader(cookieStore: Awaited<ReturnType<typeof cookies>>) {

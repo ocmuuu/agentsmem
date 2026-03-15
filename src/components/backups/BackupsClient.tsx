@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
 import { useTranslations } from '@/components/I18nProvider';
 
 type BackupItem = {
@@ -48,177 +46,65 @@ export function BackupsClient({
   embedded?: boolean;
 }) {
   const { t } = useTranslations();
-  const router = useRouter();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [ciphertextMd5, setCiphertextMd5] = useState('');
-  const [filePath, setFilePath] = useState('');
-  const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; message: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  const effectivePath = useMemo(() => {
-    if (filePath.trim()) return filePath.trim();
-    return selectedFile ? `/${selectedFile.name}` : '';
-  }, [filePath, selectedFile]);
-
-  const canUpload =
-    selectedFile != null &&
-    /^[a-f0-9]{32}$/i.test(ciphertextMd5.trim()) &&
-    effectivePath.length > 0 &&
-    !isPending;
-
-  function handleUpload(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!selectedFile || !canUpload) return;
-
-    setFeedback(null);
-    startTransition(async () => {
-      try {
-        const response = await fetch('/api/v1/upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': selectedFile.type || 'application/octet-stream',
-            'x-ciphertext-md5': ciphertextMd5.trim().toLowerCase(),
-            'x-file-path': effectivePath,
-            'x-file-name': selectedFile.name,
-          },
-          body: selectedFile,
-        });
-
-        const result = (await response.json().catch(() => ({}))) as { error?: string };
-        if (!response.ok) {
-          setFeedback({ kind: 'error', message: result.error ?? t('backups.uploadError') });
-          return;
-        }
-
-        setCiphertextMd5('');
-        setFilePath('');
-        setSelectedFile(null);
-        setFeedback({ kind: 'success', message: t('backups.uploadSuccess') });
-        router.refresh();
-      } catch {
-        setFeedback({ kind: 'error', message: t('backups.uploadError') });
-      }
-    });
-  }
 
   return (
-    <div className={embedded ? 'flex flex-col gap-6' : 'flex flex-1 bg-gradient-to-b from-[#1a1a1b] to-[#2d2d2e] px-4 py-6 sm:px-6 sm:py-8'}>
+    <div className={embedded ? 'flex flex-col gap-6' : 'flex flex-1 bg-gradient-to-b from-sky-50 to-white px-4 py-6 sm:px-6 sm:py-8'}>
       <div className={`mx-auto flex w-full flex-col gap-6 ${embedded ? '' : 'max-w-6xl'}`}>
         {embedded && (
-          <h2 className="text-xl font-semibold text-white">{t('header.backups')}</h2>
+          <h2 className="text-xl font-semibold text-slate-800">{t('header.backups')}</h2>
         )}
         {!embedded && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-white">{t('backups.title')}</h1>
-              <p className="mt-2 text-sm text-[#9ca3af]">{t('backups.subtitle')}</p>
+              <h1 className="text-3xl font-bold text-slate-800">{t('backups.title')}</h1>
+              <p className="mt-2 text-sm text-slate-500">{t('backups.subtitle')}</p>
             </div>
             <Link
               href="/dashboard"
-              className="rounded-full border border-[#343536] px-4 py-2 text-sm font-medium text-[#d1d5db] transition-colors hover:bg-[#222325]"
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
             >
               {t('backups.backToDashboard')}
             </Link>
           </div>
         )}
 
-        <section className={embedded ? undefined : 'rounded-2xl border border-[#343536] bg-[#1a1a1b]/95 p-5'}>
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold text-white">{t('backups.uploadTitle')}</h2>
-            <p className="text-sm text-[#9ca3af]">{t('backups.uploadHint')}</p>
-          </div>
-
-          <form className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_auto]" onSubmit={handleUpload}>
-            <label className="flex flex-col gap-2 text-sm text-[#d1d5db]">
-              <span>{t('backups.fileLabel')}</span>
-              <input
-                type="file"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-                className="rounded-xl border border-[#343536] bg-[#222325] px-3 py-2.5 text-sm text-white file:mr-3 file:rounded-full file:border-0 file:bg-[#e01b24] file:px-3 file:py-1.5 file:font-semibold file:text-white"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2 text-sm text-[#d1d5db]">
-              <span>{t('backups.md5Label')}</span>
-              <input
-                type="text"
-                value={ciphertextMd5}
-                onChange={(e) => setCiphertextMd5(e.target.value)}
-                placeholder={t('backups.md5Placeholder')}
-                className="rounded-xl border border-[#343536] bg-[#222325] px-3 py-2.5 text-sm text-white placeholder-[#818384] focus:border-[#e01b24] focus:outline-none"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2 text-sm text-[#d1d5db]">
-              <span>{t('backups.pathLabel')}</span>
-              <input
-                type="text"
-                value={filePath}
-                onChange={(e) => setFilePath(e.target.value)}
-                placeholder={selectedFile ? `/${selectedFile.name}` : t('backups.pathPlaceholder')}
-                className="rounded-xl border border-[#343536] bg-[#222325] px-3 py-2.5 text-sm text-white placeholder-[#818384] focus:border-[#e01b24] focus:outline-none"
-              />
-            </label>
-
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={!canUpload}
-                className="w-full rounded-full bg-[#e01b24] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c8151d] disabled:bg-[#333] disabled:text-[#818384]"
-              >
-                {isPending ? t('backups.uploading') : t('backups.uploadAction')}
-              </button>
-            </div>
-          </form>
-
-          {feedback ? (
-            <p
-              className={`mt-4 text-sm ${feedback.kind === 'error' ? 'text-[#f87171]' : 'text-[#86efac]'}`}
-              role="alert"
-            >
-              {feedback.message}
-            </p>
-          ) : null}
-        </section>
-
-        <section className={embedded ? undefined : 'rounded-2xl border border-[#343536] bg-[#1a1a1b]/95 p-5'}>
+        <section className={embedded ? undefined : 'rounded-xl border border-slate-200 bg-white p-5 shadow-sm'}>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-white">{t('backups.historyTitle')}</h2>
-            <span className="text-sm text-[#818384]">
+            <h2 className="text-lg font-semibold text-slate-800">{t('backups.historyTitle')}</h2>
+            <span className="text-sm text-slate-500">
               {initialItems.length} {t('backups.historyCountSuffix')}
             </span>
           </div>
 
           <div className="mt-4 overflow-x-auto">
             {initialItems.length > 0 ? (
-              <table className="min-w-full divide-y divide-[#343536] text-sm">
+              <table className="w-full divide-y divide-slate-200 text-sm" style={{ minWidth: '720px' }}>
                 <thead>
-                  <tr className="text-left text-[#818384]">
-                    <th className="py-3 pr-4 font-medium">{t('backups.tableFile')}</th>
-                    <th className="py-3 pr-4 font-medium">{t('backups.tablePath')}</th>
-                    <th className="py-3 pr-4 font-medium">{t('backups.tableAgent')}</th>
-                    <th className="py-3 pr-4 font-medium">{t('backups.tableSize')}</th>
-                    <th className="py-3 pr-4 font-medium">MD5</th>
-                    <th className="py-3 pr-4 font-medium">{t('backups.tableTime')}</th>
+                  <tr className="whitespace-nowrap text-left text-slate-500">
+                    <th className="py-3 pr-5 font-medium">{t('backups.tableFile')}</th>
+                    <th className="py-3 pr-5 font-medium">{t('backups.tablePath')}</th>
+                    <th className="py-3 pr-5 font-medium">{t('backups.tableSize')}</th>
+                    <th className="py-3 pr-5 font-medium">MD5</th>
+                    <th className="py-3 pr-5 font-medium">{t('backups.tableTime')}</th>
                     <th className="py-3 font-medium">{t('backups.tableActions')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#2a2b2d] text-[#e5e7eb]">
+                <tbody className="divide-y divide-slate-100 text-slate-700">
                   {initialItems.map((item) => (
-                    <tr key={item.file_id}>
-                      <td className="py-3 pr-4">
-                        <div className="font-medium text-white">{item.file_name}</div>
-                        <div className="mt-1 text-xs text-[#818384]">{item.content_type}</div>
+                    <tr key={item.file_id} className="whitespace-nowrap">
+                      <td className="py-3 pr-5">
+                        <div className="max-w-[180px] truncate font-medium text-slate-800" title={item.file_name}>{item.file_name}</div>
                       </td>
-                      <td className="py-3 pr-4 text-[#d1d5db]">{item.file_path}</td>
-                      <td className="py-3 pr-4 text-[#d1d5db]">{item.agent_name}</td>
-                      <td className="py-3 pr-4 text-[#d1d5db]">{formatBytes(item.file_size_bytes)}</td>
-                      <td className="py-3 pr-4 font-mono text-xs text-[#9ca3af]">{item.ciphertext_md5}</td>
-                      <td className="py-3 pr-4 text-[#d1d5db]">{formatDateTime(item.timestamp, locale)}</td>
+                      <td className="py-3 pr-5">
+                        <span className="max-w-[200px] block truncate text-slate-600" title={item.file_path}>{item.file_path}</span>
+                      </td>
+                      <td className="py-3 pr-5 text-slate-600">{formatBytes(item.file_size_bytes)}</td>
+                      <td className="py-3 pr-5 font-mono text-xs text-slate-400">{item.ciphertext_md5}</td>
+                      <td className="py-3 pr-5 text-slate-600">{formatDateTime(item.timestamp, locale)}</td>
                       <td className="py-3">
                         <a
                           href={`/api/v1/download/${encodeURIComponent(item.file_id)}`}
-                          className="inline-flex rounded-full border border-[#00d4aa] px-3 py-1.5 text-xs font-semibold text-[#00d4aa] transition-colors hover:bg-[#00d4aa]/10"
+                          className="inline-flex rounded-full border border-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-600 transition-colors hover:bg-teal-50"
                         >
                           {t('backups.downloadAction')}
                         </a>
@@ -228,9 +114,9 @@ export function BackupsClient({
                 </tbody>
               </table>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[#343536] px-4 py-8 text-center">
-                <p className="text-sm font-medium text-white">{t('backups.emptyTitle')}</p>
-                <p className="mt-2 text-sm text-[#818384]">{t('backups.emptyBody')}</p>
+              <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center">
+                <p className="text-sm font-medium text-slate-700">{t('backups.emptyTitle')}</p>
+                <p className="mt-2 text-sm text-slate-500">{t('backups.emptyBody')}</p>
               </div>
             )}
           </div>

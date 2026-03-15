@@ -142,14 +142,20 @@ const MAX_PAGE_LIMIT = 200;
 
 export async function listBackupsForUser(
   userId: string,
-  opts?: { limit?: number; offset?: number }
+  opts?: { limit?: number; offset?: number; agentId?: string }
 ): Promise<{ items: BackupSummary[]; total: number }> {
   const limit = Math.min(Math.max(opts?.limit ?? DEFAULT_PAGE_LIMIT, 1), MAX_PAGE_LIMIT);
   const offset = Math.max(opts?.offset ?? 0, 0);
+  const agentId = opts?.agentId;
+
+  const whereClause = agentId
+    ? 'WHERE b.user_id = ? AND b.agent_id = ?'
+    : 'WHERE b.user_id = ?';
+  const whereParams = agentId ? [userId, agentId] : [userId];
 
   const [[countRow]] = await pool.execute<import('mysql2').RowDataPacket[]>(
-    'SELECT COUNT(*) AS total FROM backups WHERE user_id = ?',
-    [userId]
+    `SELECT COUNT(*) AS total FROM backups b ${whereClause}`,
+    whereParams
   );
   const total = Number(countRow.total);
 
@@ -168,10 +174,10 @@ export async function listBackupsForUser(
        b.timestamp
      FROM backups b
      JOIN agents a ON a.id = b.agent_id
-     WHERE b.user_id = ?
+     ${whereClause}
      ORDER BY b.timestamp DESC, b.created_at DESC
      LIMIT ? OFFSET ?`,
-    [userId, limit, offset]
+    [...whereParams, limit, offset]
   );
 
   return { items: rows.map((row) => backupRowToSummary(row)), total };
