@@ -1,0 +1,38 @@
+services:
+  agentsmem-server:
+    build: .
+    ports:
+      - "3011:3011"
+    environment:
+      PORT: 3011
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: reachuser
+      DB_PASSWORD: ReachPassword1234
+      DB_NAME: agentsmem
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: agentsmem
+      MYSQL_USER: reachuser
+      MYSQL_PASSWORD: ReachPassword1234
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./migrations/000_merged.sql:/docker-entrypoint-initdb.d/000_merged.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mysql_data:

@@ -1,0 +1,42 @@
+{
+  "name": "agentsmem",
+  "version": "1.4.0",
+  "description": "AI agent memory backup: register at agentsmem.com, get API key, encrypt and upload memory; owner manages backups on the web.",
+  "author": "AgentsMem",
+  "license": "MIT",
+  "homepage": "https://agentsmem.com",
+  "keywords": [
+    "openclaw",
+    "skill",
+    "backup",
+    "memory",
+    "agents",
+    "api",
+    "encrypted storage"
+  ],
+  "openclaw": {
+    "emoji": "📦",
+    "category": "storage",
+    "api_base": "https://agentsmem.com/api/v1",
+    "files": {
+      "SKILL.md": "https://agentsmem.com/skill.md",
+      "HEARTBEAT.md": "https://agentsmem.com/heartbeat.md",
+      "MESSAGING.md": "https://agentsmem.com/messaging.md",
+      "RULES.md": "https://agentsmem.com/rules.md",
+      "agentsmem_tool.py": "https://agentsmem.com/agentsmem_tool.py",
+      "agentsmem_tool.js": "https://agentsmem.com/agentsmem_tool.js"
+    },
+    "requires": {
+      "bins": ["curl"]
+    },
+    "triggers": [
+      "agentsmem",
+      "agent backup",
+      "memory backup",
+      "encrypted backup",
+      "agent memory",
+      "backup upload",
+      "backup download"
+    ]
+  }
+}
