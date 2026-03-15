@@ -246,3 +246,27 @@ export async function findBackupByFileIdForUser(
     blob_data: Buffer.isBuffer(row.blob_data) ? row.blob_data : Buffer.from(row.blob_data),
   };
 }
+
+/** Delete a backup by file_id for the given user. Returns true if deleted, false if not found. */
+export async function deleteBackupByFileId(userId: string, fileId: string): Promise<boolean> {
+  const [rows] = await pool.execute<import('mysql2').RowDataPacket[]>(
+    'SELECT id, blob_id FROM backups WHERE user_id = ? AND file_id = ? LIMIT 1',
+    [userId, fileId]
+  );
+  if (rows.length === 0) return false;
+
+  const blobId = rows[0].blob_id as string;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute('DELETE FROM backups WHERE user_id = ? AND file_id = ?', [userId, fileId]);
+    await conn.execute('DELETE FROM backup_blobs WHERE id = ?', [blobId]);
+    await conn.commit();
+    return true;
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+}

@@ -15,7 +15,8 @@ export const en = {
     'footer.openSource': 'Open source',
     'footer.feedback': 'Feedback',
 
-    'home.heroTitle': "Your AI agent's memory",
+    'home.heroTitle': "Your AI agent's ",
+    'home.heroTitleLink': 'memory',
     'home.heroTitleHighlight': ' secure encrypted backup.',
     'home.heroTitle2': '',
     'home.heroSubtitle': 'Back up encrypted memory. After registering your agent, encrypted memory is automatically backed up daily. Manage memory backups in the dashboard (encrypted by the agent; the server cannot directly view memory content), or have a new agent download and restore memory for migration and sharing.',
@@ -257,6 +258,10 @@ export const en = {
     'backups.tableTime': 'Uploaded at',
     'backups.tableActions': 'Actions',
     'backups.downloadAction': 'Download',
+    'backups.deleteAction': 'Delete',
+    'backups.deleteConfirm': 'Are you sure you want to delete this backup? This cannot be undone.',
+    'backups.deleteSuccess': 'Backup deleted.',
+    'backups.deleteError': 'Failed to delete backup. Please try again.',
     'backups.emptyTitle': 'No encrypted backups yet',
     'backups.emptyBody': 'Once you upload ciphertext blobs, they will appear here with their MD5 fingerprints.',
 
@@ -316,6 +321,23 @@ export const en = {
   'security.heading4': 'Open source: you can verify and self-host',
   'security.p4': 'AgentsMem is open source. You can read the code on GitHub to verify how encryption and backup work. You can also deploy your own instance and keep full control of your data.',
   'security.githubLink': 'View source on GitHub',
+
+  'header.memory': 'What is agent memory',
+  'memory.title': 'What is Agent Memory?',
+  'memory.metaTitle': 'Agent Memory',
+  'memory.intro': 'Agent memory is the persistent knowledge that AI agents accumulate through conversations and tasks — preferences, decisions, context, and lessons learned. It is what makes an agent truly yours, not just a generic tool.',
+  'memory.heading0': 'More than chat history',
+  'memory.p0': 'Agent memory goes far beyond a conversation log. It includes your preferences, project context, past decisions and their rationale, recurring patterns, and domain-specific knowledge the agent has learned while working with you. It is the accumulated intelligence that makes every future interaction more efficient and personalized.',
+  'memory.heading1': 'Why agent memory matters',
+  'memory.p1': 'Without memory, every conversation starts from zero — the agent forgets your coding style, your project architecture, your preferred tools, and every decision you made together. With memory, the agent builds on prior context, avoids repeating mistakes, and delivers increasingly relevant assistance over time.',
+  'memory.heading2': 'Memory is fragile',
+  'memory.p2': 'Agent memory typically lives as local files on a single machine. Hardware failures, OS reinstalls, environment migrations, or simply switching to a new device can wipe it out instantly. Months of accumulated context — gone in a moment, with no way to recover.',
+  'memory.heading3': 'Memory needs backup',
+  'memory.p3': 'Just like you back up important documents, agent memory deserves the same protection. Regular encrypted backups ensure that your agent\'s knowledge survives hardware changes, environment migrations, and unexpected failures. With backups, you can also migrate memory to a new agent or share context across multiple agents.',
+  'memory.heading4': 'That is why AgentsMem exists',
+  'memory.p4': 'AgentsMem provides automated, encrypted backup for your agent\'s memory. Your agent encrypts memory locally before upload — we never see the plaintext. If anything goes wrong, you or a new agent can restore the full memory from backup and pick up right where you left off.',
+  'memory.ctaSecurity': 'How we keep your memory safe →',
+  'memory.ctaGetStarted': 'Get started — view skill docs →',
 } as const;
 
 export type TranslationKey = keyof typeof en;

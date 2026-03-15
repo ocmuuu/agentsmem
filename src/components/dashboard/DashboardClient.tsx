@@ -207,44 +207,11 @@ export function DashboardClient({ data, locale }: { data: DashboardData; locale:
     });
   }
 
-  // ---- Agent detail view (backups for one agent) ----
-  if (selectedAgent) {
-    return (
-      <div className="flex min-h-[80dvh] flex-1 bg-gradient-to-b from-sky-50 to-white px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleBackToAgents}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50"
-              >
-                ← {t('dashboard.backToAgents')}
-              </button>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-lg font-bold text-slate-800">{selectedAgent.name}</h2>
-                <p className="truncate text-xs text-slate-500">{selectedAgent.handle}</p>
-              </div>
-            </div>
-          </div>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            {backupsLoading ? (
-              <p className="py-6 text-center text-sm text-slate-500">{t('dashboard.actionLoading')}</p>
-            ) : (
-              <BackupsClient initialItems={agentBackups} locale={locale} embedded />
-            )}
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  // ---- Main dashboard view ----
+  // ---- Single layout: header always on top, content below ----
   return (
     <div className="flex min-h-[80dvh] flex-1 bg-gradient-to-b from-sky-50 to-white px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
-        {/* Header */}
+        {/* Header: always visible */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -265,44 +232,60 @@ export function DashboardClient({ data, locale }: { data: DashboardData; locale:
           {feedback ? <p className="mt-3 text-xs text-red-600">{feedback}</p> : null}
         </div>
 
-        {/* Main tabs */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex border-b border-slate-200" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mainTab === 'agents'}
-              onClick={() => setMainTab('agents')}
-              className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none ${
-                mainTab === 'agents'
-                  ? 'border-teal-500 text-slate-800'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-              style={{ marginBottom: -1 }}
-            >
-              {t('dashboard.tabAgents')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mainTab === 'settings'}
-              onClick={() => setMainTab('settings')}
-              className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none ${
-                mainTab === 'settings'
-                  ? 'border-teal-500 text-slate-800'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-              style={{ marginBottom: -1 }}
-            >
-              {t('dashboard.tabSettings')}
-            </button>
-          </div>
-
-          <div className="p-5">
-            {mainTab === 'agents' ? (
-              <AgentsList agents={data.agents} locale={locale} onSelect={handleSelectAgent} t={t} />
+        {/* Content: agent detail (back + file list) or main tabs */}
+        {selectedAgent ? (
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            {backupsLoading ? (
+              <p className="py-6 text-center text-sm text-slate-500">{t('dashboard.actionLoading')}</p>
             ) : (
-              <SettingsPanel
+              <BackupsClient
+                initialItems={agentBackups}
+                locale={locale}
+                embedded
+                onDeleteSuccess={() => fetchBackupsForAgent(selectedAgent.id)}
+                agentName={selectedAgent.name}
+                agentHandle={selectedAgent.handle}
+                onBack={handleBackToAgents}
+              />
+            )}
+          </section>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex border-b border-slate-200" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mainTab === 'agents'}
+                onClick={() => setMainTab('agents')}
+                className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none ${
+                  mainTab === 'agents'
+                    ? 'border-teal-500 text-slate-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+                style={{ marginBottom: -1 }}
+              >
+                {t('dashboard.tabAgents')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mainTab === 'settings'}
+                onClick={() => setMainTab('settings')}
+                className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none ${
+                  mainTab === 'settings'
+                    ? 'border-teal-500 text-slate-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+                style={{ marginBottom: -1 }}
+              >
+                {t('dashboard.tabSettings')}
+              </button>
+            </div>
+            <div className="p-5">
+              {mainTab === 'agents' ? (
+                <AgentsList agents={data.agents} locale={locale} onSelect={handleSelectAgent} t={t} />
+              ) : (
+                <SettingsPanel
                 settingsPanel={settingsPanel}
                 setSettingsPanel={setSettingsPanel}
                 requiresPasswordSetup={requiresPasswordSetup}
@@ -331,8 +314,9 @@ export function DashboardClient({ data, locale }: { data: DashboardData; locale:
                 t={t}
               />
             )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

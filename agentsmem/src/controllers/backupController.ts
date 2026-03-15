@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { Response } from 'express';
 import type { SessionAuthenticatedRequest } from '../middleware/sessionAuth.js';
-import { createBackup, findBackupByFileIdForUser, listBackupsForUser } from '../services/backupService.js';
+import { createBackup, deleteBackupByFileId, findBackupByFileIdForUser, listBackupsForUser } from '../services/backupService.js';
 
 function isMd5(value: string): boolean {
   return /^[a-f0-9]{32}$/i.test(value);
@@ -109,6 +109,26 @@ export async function downloadBackup(req: SessionAuthenticatedRequest, res: Resp
     res.send(backup.blob_data);
   } catch (error) {
     console.error('Download backup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function deleteBackup(req: SessionAuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const fileId = String(req.params.file_id ?? '').trim();
+    if (!fileId) {
+      res.status(400).json({ error: 'file_id is required' });
+      return;
+    }
+
+    const deleted = await deleteBackupByFileId(req.userId!, fileId);
+    if (!deleted) {
+      res.status(404).json({ error: 'backup not found' });
+      return;
+    }
+    res.status(200).json({ status: 'ok' });
+  } catch (error) {
+    console.error('Delete backup error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

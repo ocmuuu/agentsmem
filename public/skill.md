@@ -132,7 +132,7 @@ curl -s -X POST https://agentsmem.com/api/v1/claim \
 
 - **201** → success. A session cookie is set. Account is now bound.
 - **400** → missing or invalid field (agent, api_key, password, email). Read the `error` message to see which field to fix.
-- **401** → `invalid api_key`. Verify the key in `credentials.json`. If the error is `email already in use`, the email is already linked to another agent — ask the owner for their **existing account password** and retry (see "Linking multiple agents" below).
+- **401** → `invalid api_key`. Verify the key in `credentials.json`. If the error is `email already in use`, the email is already linked to another agent — ask the owner for their **existing account password** and their **previous agent's file encryption key** (`.vault`), then retry (see "Linking multiple agents" below).
 - **404** → `agent not found`. Register first via `/api/v1/register`.
 - **409** → `agent already claimed` — skip claim, the account is already set up.
 
@@ -142,8 +142,12 @@ If the owner already has an agent claimed with the same email, the claim API ret
 
 1. **Tell the owner** the email is already registered on AgentsMem with another agent.
 2. **Ask the owner for their existing account password** (the one they use to log in at agentsmem.com, or the temporary password from their first agent's setup).
-3. **Remind the owner**: if they forgot the password, they can reset it at **https://agentsmem.com/reset-password** using any of their existing agent's API key.
-4. **Retry the claim** with the same email and the **existing password** (not a new generated one):
+3. **Ask the owner for their previous agent's file encryption key** (the key stored in `.vault` from the previous agent's setup). If the owner provides this key, this agent will **reuse it directly** — no new key will be generated, keeping all backups under one consistent key. If the owner cannot provide it, a new key will be generated but old backups will be unreadable. Tell the owner:
+   - The previous encryption key is stored in `<previous_agent_skill_dir>/.vault`.
+   - If they saved it offline (screenshot, paper, password manager) during the first agent's setup, they can provide it now.
+   - If neither the `.vault` file nor the offline copy is available, **existing backups from the previous agent will be permanently unreadable** by this new agent, and a new key will be generated for future backups.
+4. **Remind the owner**: if they forgot the password, they can reset it at **https://agentsmem.com/reset-password** using any of their existing agent's API key.
+5. **Retry the claim** with the same email and the **existing password** (not a new generated one):
 
 ```bash
 curl -s -X POST https://agentsmem.com/api/v1/claim \
@@ -160,6 +164,75 @@ curl -s -X POST https://agentsmem.com/api/v1/claim \
 - **201** with `"Agent linked to existing account"` → success. The new agent is now linked to the owner's existing account. All agents share the same login and can restore each other's backups.
 - **401** → password does not match the existing account. Ask the owner to double-check their password, or remind them to reset it at https://agentsmem.com/reset-password.
 
+#### After successful linking: encryption key handling
+
+Since the encryption key is generated **after** claim (Step 4), normally no key exists yet at this point. However, **before writing any key to `.vault`**, always check if the file already exists and contains data:
+
+```bash
+if [ -s "$SKILL_DIR/.vault" ]; then
+  EXISTING_KEY=$(cat "$SKILL_DIR/.vault")
+  # .vault already has a key — do NOT overwrite without asking the owner
+fi
+```
+
+If `.vault` already exists and is non-empty, **ask the owner** how to proceed:
+
+```text
+A file encryption key already exists locally:
+
+  Existing key: <display the existing key>
+
+How would you like to handle this?
+  1. Keep the existing key (use it for all future backups)
+  2. Replace it with the key you provided (the previous agent's key)
+  3. Cancel — I need to think about it
+
+⚠️  Choosing "Replace" will overwrite the current key.
+   If any backups were encrypted with the current key, make sure
+   you have it saved elsewhere before replacing.
+```
+
+Wait for the owner's explicit choice before proceeding.
+
+If `.vault` does not exist or is empty, proceed as follows:
+
+**If the owner provided the previous encryption key** → save it directly as this agent's `.vault` and **skip Step 4** (do not generate a new key):
+
+```bash
+echo "PREVIOUS_KEY_FROM_OWNER" > "$SKILL_DIR/.vault"
+```
+
+All agents under the same account share one encryption key — old backups can be decrypted and new backups use the same key.
+
+Tell the owner:
+
+```text
+This agent is now linked to your existing AgentsMem account.
+
+  🔑 Encryption key (reusing your previous key):
+     <display the key>
+
+✅ Using the same encryption key as your previous agent.
+   All existing backups can be decrypted, and new backups will use the same key.
+```
+
+**If the owner cannot provide the previous key** → proceed to Step 4 as normal to generate a new key. Warn the owner about the consequence:
+
+```text
+This agent is now linked to your existing AgentsMem account.
+
+  🔑 Encryption key (newly generated):
+     <display the new key>
+
+⚠️  Because the previous encryption key was not provided:
+   - This agent CANNOT decrypt backups uploaded by the previous agent.
+   - New backups will use the new key above.
+   - If you find the previous key later, provide it and this agent
+     can switch to it for consistency.
+   Please save this key offline — screenshot, write it down, or
+   save to a password manager.
+```
+
 After a successful claim, **immediately tell the owner** the generated password:
 
 ```text
@@ -174,7 +247,34 @@ Your AgentsMem account has been created.
 
 ### Step 4: Generate an Encryption Key
 
-Generate a secret key for local encryption, store it, and **show it to the owner**:
+**Before generating**, check if `.vault` already exists and contains a key:
+
+```bash
+if [ -s "$SKILL_DIR/.vault" ]; then
+  EXISTING_KEY=$(cat "$SKILL_DIR/.vault")
+  # .vault already has a key — do NOT overwrite without asking the owner
+fi
+```
+
+If `.vault` already exists and is non-empty, **show the existing key to the owner and ask**:
+
+```text
+A file encryption key already exists locally:
+
+  Existing key: <display the existing key>
+
+Would you like to:
+  1. Keep the existing key (recommended if previous backups were encrypted with it)
+  2. Generate a new key and replace it
+
+⚠️  If you choose "Replace", any backups encrypted with the current key
+   will require this key to decrypt. Make sure you have it saved elsewhere
+   before replacing.
+```
+
+Wait for the owner's explicit choice. If they choose to keep it, **skip key generation** and proceed to Step 5.
+
+If `.vault` does not exist or is empty, or the owner chose to replace, generate a secret key for local encryption, store it, and **show it to the owner**:
 
 ```bash
 # Python:
@@ -520,14 +620,14 @@ Every API error response includes an `"error"` field and often a `"hint"` field.
 | `404` | `agent not found`, `backup not found` | Verify the agent name or file_id |
 | `409` | `Agent name already registered` | Ask the owner for a different name |
 | `409` | `agent already claimed` | Skip claim — account is already set up |
-| `401` | `email already in use` | Email is linked to another agent. Ask the owner for their existing password and retry claim (see "Linking multiple agents"). |
+| `401` | `email already in use` | Email is linked to another agent. Ask the owner for their existing password **and their previous agent's file encryption key** (`.vault`), then retry claim (see "Linking multiple agents"). Without the previous key, old backups cannot be decrypted. |
 | `429` | `Rate limit exceeded` | Wait `retry_after_seconds` (included in response) then retry |
 | `500` | `Internal server error` or `internal_error` | Wait and retry; escalate to owner if persistent |
 
 ### When to Escalate to the Owner
 
 - `409` on register — name taken. Ask for a different name.
-- `401` with `email already in use` on claim — ask owner for their existing password to link agents.
+- `401` with `email already in use` on claim — ask owner for their existing password **and their previous agent's file encryption key** (`.vault`) to link agents. Without the previous key, old backups cannot be decrypted by the new agent.
 - Repeated `401` with `invalid_credentials` or `invalid_password` — ask owner to verify.
 - `401` with `agent not claimed` — walk the owner through claiming or do it for them.
 - Repeated `429` or `5xx` — notify owner of service issue.

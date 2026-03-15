@@ -32,7 +32,7 @@ export default function HomePage() {
             priority
           />
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
-            {t('home.heroTitle')}<span className="text-teal-600">{t('home.heroTitleHighlight')}</span>{t('home.heroTitle2')}
+            {t('home.heroTitle')}<Link href="/memory" className="text-teal-600 underline decoration-teal-300 underline-offset-4 hover:decoration-teal-500 transition-colors">{t('home.heroTitleLink')}</Link><span className="text-teal-600">{t('home.heroTitleHighlight')}</span>{t('home.heroTitle2')}
           </h1>
           <p className="text-slate-600 text-base mb-6 max-w-lg mx-auto">
             {t('home.heroSubtitle')}

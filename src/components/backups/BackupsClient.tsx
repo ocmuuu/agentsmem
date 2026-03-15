@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useTranslations } from '@/components/I18nProvider';
 
 type BackupItem = {
@@ -40,18 +41,62 @@ export function BackupsClient({
   initialItems,
   locale,
   embedded,
+  onDeleteSuccess,
+  agentName,
+  agentHandle,
+  onBack,
 }: {
   initialItems: BackupItem[];
   locale: string;
   embedded?: boolean;
+  onDeleteSuccess?: () => void;
+  agentName?: string;
+  agentHandle?: string;
+  onBack?: () => void;
 }) {
   const { t } = useTranslations();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+
+  async function handleDelete(item: BackupItem) {
+    if (!window.confirm(t('backups.deleteConfirm'))) return;
+    setDeletingId(item.file_id);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/v1/backup/${encodeURIComponent(item.file_id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setFeedback({ kind: 'error', message: data.error ?? t('backups.deleteError') });
+        return;
+      }
+      setFeedback({ kind: 'success', message: t('backups.deleteSuccess') });
+      onDeleteSuccess?.();
+    } catch {
+      setFeedback({ kind: 'error', message: t('backups.deleteError') });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className={embedded ? 'flex flex-col gap-6' : 'flex flex-1 bg-gradient-to-b from-sky-50 to-white px-4 py-6 sm:px-6 sm:py-8'}>
       <div className={`mx-auto flex w-full flex-col gap-6 ${embedded ? '' : 'max-w-6xl'}`}>
         {embedded && (
-          <h2 className="text-xl font-semibold text-slate-800">{t('header.backups')}</h2>
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                ← {t('dashboard.backToAgents')}
+              </button>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-lg font-bold text-slate-800">{agentName}</h2>
+              {agentHandle && <p className="truncate text-xs text-slate-500">{agentHandle}</p>}
+            </div>
+          </div>
         )}
         {!embedded && (
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -75,6 +120,14 @@ export function BackupsClient({
               {initialItems.length} {t('backups.historyCountSuffix')}
             </span>
           </div>
+          {feedback ? (
+            <p
+              className={`mt-3 text-sm ${feedback.kind === 'error' ? 'text-red-600' : 'text-green-600'}`}
+              role="alert"
+            >
+              {feedback.message}
+            </p>
+          ) : null}
 
           <div className="mt-4 overflow-x-auto">
             {initialItems.length > 0 ? (
@@ -102,12 +155,22 @@ export function BackupsClient({
                       <td className="py-3 pr-5 font-mono text-xs text-slate-400">{item.ciphertext_md5}</td>
                       <td className="py-3 pr-5 text-slate-600">{formatDateTime(item.timestamp, locale)}</td>
                       <td className="py-3">
-                        <a
-                          href={`/api/v1/download/${encodeURIComponent(item.file_id)}`}
-                          className="inline-flex rounded-full border border-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-600 transition-colors hover:bg-teal-50"
-                        >
-                          {t('backups.downloadAction')}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`/api/v1/download/${encodeURIComponent(item.file_id)}`}
+                            className="inline-flex rounded-full border border-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-600 transition-colors hover:bg-teal-50"
+                          >
+                            {t('backups.downloadAction')}
+                          </a>
+                          <button
+                            type="button"
+                            disabled={deletingId === item.file_id}
+                            onClick={() => handleDelete(item)}
+                            className="inline-flex rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {deletingId === item.file_id ? '…' : t('backups.deleteAction')}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
